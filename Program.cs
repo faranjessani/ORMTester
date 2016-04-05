@@ -16,36 +16,48 @@ namespace ORMTester
 
     using Dapper;
 
+    using MathNet.Numerics.Statistics;
+
     class Program
     {
         static void Main(string[] args)
         {
-            executionsPerSample = 1000;
-            var totalSamples = 10;
-            long dapperDynamicToPoco = 0,
-                     dapperDynamic = 0,
-                     entityFrameworkDynamic = 0,
-                     entityFrameworkSP = 0,
-                     dapperSP = 0,
-                     dapperSPWithPOCO = 0;
-            Console.WriteLine($"Running {totalSamples * executionsPerSample} queries per framework. Could take a minute.");
+            executionsPerSample = 10;
+            var totalSamples = 100;
+            var measurements = new Dictionary<string, IList<double>>(6)
+                                   {
+                                       {"Dapper Dynamic SQL with POCO Mapping",new List<double>()},
+                                       {"Dapper Dynamic SQL", new List<double>() },
+                                       {"Dapper Stored Procedure", new List<double>()},
+                                       {"Dapper Stored Procedure with POCO Mapping",new List<double>()},
+                                       {"Entity Framework Dynamic SQL",new List<double>()},
+                                       {"Entity Framework SP", new List<double>() },
+                                   };
+            var delegates = new Dictionary<string, Action>(6)
+                                {
+                                       {"Dapper Dynamic SQL with POCO Mapping",RunDapperWithDynamicSqlToPoco},
+                                       {"Dapper Dynamic SQL", RunDapperWithDynamicSql },
+                                       {"Dapper Stored Procedure", RunEF},
+                                       {"Dapper Stored Procedure with POCO Mapping",RunDapperDynamicSP},
+                                       {"Entity Framework Dynamic SQL",RunDapperDynamicSP},
+                                       {"Entity Framework SP", RunDapperPOCOSP },
+                                };
+
+            Console.WriteLine($"Running {totalSamples} samples of {executionsPerSample} queries per framework. Could take a minute.");
             for (int i = 0; i < totalSamples; i++)
             {
-                dapperDynamicToPoco += RunNTimes(RunDapperWithDynamicSqlToPoco, executionsPerSample);
-                dapperDynamic += RunNTimes(RunDapperWithDynamicSql, executionsPerSample);
-                entityFrameworkDynamic += RunNTimes(RunEF, executionsPerSample);
-                dapperSP += RunNTimes(RunDapperDynamicSP, executionsPerSample);
-                dapperSPWithPOCO += RunNTimes(RunDapperPOCOSP, executionsPerSample);
-                entityFrameworkSP += RunNTimes(RunEFSP, executionsPerSample);
+                foreach (var action in delegates)
+                {
+                    measurements[action.Key].Add(RunNTimes(action.Value, executionsPerSample));
+                }
             }
 
-            Console.WriteLine($"Average time in milliseconds for {totalSamples} samples of {executionsPerSample} executions:");
-            Console.WriteLine($"Entity Framework Dynamic SQL:              {entityFrameworkDynamic / totalSamples}");
-            Console.WriteLine($"Entity Framework SP:                       {entityFrameworkSP / totalSamples}");
-            Console.WriteLine($"Dapper Dynamic SQL with POCO Mapping:      {dapperDynamicToPoco / totalSamples}");
-            Console.WriteLine($"Dapper Dynamic SQL:                        {dapperDynamic / totalSamples}");
-            Console.WriteLine($"Dapper Stored Procedure:                   {dapperSP / totalSamples}");
-            Console.WriteLine($"Dapper Stored Procedure with POCO Mapping: {dapperSPWithPOCO / totalSamples}");
+            Console.WriteLine($"Results of {totalSamples} samples of {executionsPerSample} executions:");
+            foreach (var measurement in measurements)
+            {
+                var fiveNumberSummary = Statistics.FiveNumberSummary(measurement.Value);
+                Console.WriteLine($"{measurement.Key}\nMinimum: {Math.Round(fiveNumberSummary[0])}\tLower Quartile: {Math.Round(fiveNumberSummary[1])}\tMedian: {Math.Round(fiveNumberSummary[2])}\tUpper Quartile: {Math.Round(fiveNumberSummary[3])}\tMaximum: {Math.Round(fiveNumberSummary[4])}");
+            }
             Console.WriteLine("-----------------------------------");
 
             Console.Read();

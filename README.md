@@ -1,20 +1,30 @@
 ###Results of a random run:
 
-Running 10000 queries per framework. Could take a minute.
+Results of 100 samples of 10 executions:
 
-Average time in milliseconds for 10 samples of 1000 executions:
+**Dapper Dynamic SQL with POCO Mapping**
 
-Entity Framework Dynamic SQL:              2257
+Minimum: 8      Lower Quartile: 10      Median: 12      Upper Quartile: 15      Maximum: 141
 
-Entity Framework SP:                       2105
+**Dapper Dynamic SQL**
 
-Dapper Dynamic SQL with POCO Mapping:      1016
+Minimum: 7      Lower Quartile: 10      Median: 11      Upper Quartile: 14      Maximum: 20
 
-Dapper Dynamic SQL:                        1012
+**Dapper Stored Procedure**
 
-Dapper Stored Procedure:                   1019
+Minimum: 20     Lower Quartile: 28      Median: 31      Upper Quartile: 36      Maximum: 1667
 
-Dapper Stored Procedure with POCO Mapping: 1073
+**Dapper Stored Procedure with POCO Mapping**
+
+Minimum: 8      Lower Quartile: 10      Median: 12      Upper Quartile: 14      Maximum: 18
+
+**Entity Framework Dynamic SQL**
+
+Minimum: 8      Lower Quartile: 10      Median: 12      Upper Quartile: 14      Maximum: 19
+
+**Entity Framework SP**
+
+Minimum: 8      Lower Quartile: 10      Median: 11      Upper Quartile: 14      Maximum: 18
 
 -----------------------------------
 
