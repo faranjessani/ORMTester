@@ -21,7 +21,7 @@ namespace ORMTester
         static void Main(string[] args)
         {
             executionsPerSample = 1000;
-            var totalSamples = 1;
+            var totalSamples = 10;
             long dapperDynamicToPoco = 0,
                      dapperDynamic = 0,
                      entityFrameworkDynamic = 0,
