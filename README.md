@@ -17,3 +17,5 @@ Dapper Stored Procedure:                   1019
 Dapper Stored Procedure with POCO Mapping: 1073
 
 -----------------------------------
+
+http://blog.codinghorror.com/who-needs-stored-procedures-anyways/
