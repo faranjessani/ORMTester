@@ -53,10 +53,34 @@ namespace ORMTester
             }
 
             Console.WriteLine($"Results of {totalSamples} samples of {executionsPerSample} executions:");
+            IDictionary<string, IDictionary<string, double>> fiveNumbersForEach =
+                new Dictionary<string, IDictionary<string, double>>()
+                    {
+                        { "Minimum", new Dictionary<string, double>() },
+                        { "Lower Quartile", new Dictionary<string, double>() },
+                        { "Median", new Dictionary<string, double>() },
+                        { "Upper Quartile", new Dictionary<string, double>() },
+                        { "Maximum", new Dictionary<string, double>() },
+                    };
             foreach (var measurement in measurements)
             {
                 var fiveNumberSummary = Statistics.FiveNumberSummary(measurement.Value);
-                Console.WriteLine($"{measurement.Key}\nMinimum: {Math.Round(fiveNumberSummary[0])}\tLower Quartile: {Math.Round(fiveNumberSummary[1])}\tMedian: {Math.Round(fiveNumberSummary[2])}\tUpper Quartile: {Math.Round(fiveNumberSummary[3])}\tMaximum: {Math.Round(fiveNumberSummary[4])}");
+                fiveNumbersForEach["Minimum"].Add(measurement.Key, fiveNumberSummary[0]);
+                fiveNumbersForEach["Lower Quartile"].Add(measurement.Key, fiveNumberSummary[1]);
+                fiveNumbersForEach["Median"].Add(measurement.Key, fiveNumberSummary[2]);
+                fiveNumbersForEach["Upper Quartile"].Add(measurement.Key, fiveNumberSummary[3]);
+                fiveNumbersForEach["Maximum"].Add(measurement.Key, fiveNumberSummary[4]);
+            }
+
+            Console.Write("| Sample");
+            foreach (var key in fiveNumbersForEach.Keys)
+            {
+                Console.Write($"| {key}");
+            }
+            Console.WriteLine(" |");
+            foreach (var fiveNumbers in fiveNumbersForEach)
+            {
+                Console.Write($"| {fiveNumbers.Value.}");
             }
             Console.WriteLine("-----------------------------------");
 
