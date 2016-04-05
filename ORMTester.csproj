@@ -72,6 +72,7 @@
     <None Include="App.config" />
     <None Include="Database\AdventureWorks2014.bak" />
     <None Include="packages.config" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

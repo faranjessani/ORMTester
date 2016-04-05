@@ -22,7 +22,7 @@ namespace ORMTester
     {
         static void Main(string[] args)
         {
-            executionsPerSample = 10;
+            executionsPerSample = 100;
             var totalSamples = 100;
             var measurements = new Dictionary<string, IList<double>>(6)
                                    {
@@ -53,14 +53,49 @@ namespace ORMTester
             }
 
             Console.WriteLine($"Results of {totalSamples} samples of {executionsPerSample} executions:");
-            foreach (var measurement in measurements)
+            var results = (from measurement in measurements
+                            let fiveNumberSummary = measurement.Value.FiveNumberSummary()
+                            select
+                                new Measurement()
+                                    {
+                                        Case = measurement.Key,
+                                        Minimum = Math.Round(fiveNumberSummary[0]),
+                                        LowerQuantile = Math.Round(fiveNumberSummary[1]),
+                                        Median = Math.Round(fiveNumberSummary[2]),
+                                        UpperQuantile = Math.Round(fiveNumberSummary[3]),
+                                        Maximum = Math.Round(fiveNumberSummary[4])
+                                    });
+
+            Console.WriteLine("Case | Minimum | Lower Quantile | Median | Upper Quantile | Maximum");
+            Console.WriteLine("--- | --- | --- | --- | --- | ---");
+            foreach (var measurement in results)
             {
-                var fiveNumberSummary = Statistics.FiveNumberSummary(measurement.Value);
-                Console.WriteLine($"{measurement.Key}\nMinimum: {Math.Round(fiveNumberSummary[0])}\tLower Quartile: {Math.Round(fiveNumberSummary[1])}\tMedian: {Math.Round(fiveNumberSummary[2])}\tUpper Quartile: {Math.Round(fiveNumberSummary[3])}\tMaximum: {Math.Round(fiveNumberSummary[4])}");
+                Console.WriteLine(measurement.ToString());
             }
+
             Console.WriteLine("-----------------------------------");
 
             Console.Read();
+        }
+
+        public class Measurement
+        {
+            public string Case { get; set; }
+
+            public double Minimum { get; set; }
+
+            public double LowerQuantile { get; set; }
+
+            public double Median { get; set; }
+
+            public double UpperQuantile { get; set; }
+
+            public double Maximum { get; set; }
+
+            public override string ToString()
+            {
+                return $"{this.Case} | {this.Minimum} | {this.LowerQuantile} | {this.Median} | {this.UpperQuantile} | {this.Maximum}";
+            }
         }
 
         private static void RunEF()
