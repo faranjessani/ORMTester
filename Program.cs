@@ -24,37 +24,54 @@ namespace ORMTester
         {
             executionsPerSample = 100;
             var totalSamples = 100;
-            var measurements = new Dictionary<string, IList<double>>(6)
-                                   {
-                                       {"Dapper Dynamic SQL with POCO Mapping",new List<double>()},
-                                       {"Dapper Dynamic SQL", new List<double>() },
-                                       {"Dapper Stored Procedure", new List<double>()},
-                                       {"Dapper Stored Procedure with POCO Mapping",new List<double>()},
-                                       {"Entity Framework Dynamic SQL",new List<double>()},
-                                       {"Entity Framework SP", new List<double>() },
-                                   };
-            var delegates = new Dictionary<string, Action>(6)
+            var testCases = new List<Tuple<string, Action>>
                                 {
-                                       {"Dapper Dynamic SQL with POCO Mapping",RunDapperWithDynamicSqlToPoco},
-                                       {"Dapper Dynamic SQL", RunDapperWithDynamicSql },
-                                       {"Dapper Stored Procedure", RunEF},
-                                       {"Dapper Stored Procedure with POCO Mapping",RunDapperDynamicSP},
-                                       {"Entity Framework Dynamic SQL",RunDapperDynamicSP},
-                                       {"Entity Framework SP", RunDapperPOCOSP },
+                                    new Tuple<string, Action>(
+                                        "Dapper Stored Procedure",
+                                        RunDapperDynamicSP),
+                                    new Tuple<string, Action>(
+                                        "Dapper Stored Procedure with POCO Mapping",
+                                        RunDapperPOCOSP),
+                                    new Tuple<string, Action>(
+                                        "Entity Framework Dynamic SQL",
+                                        RunEF),
+                                    new Tuple<string, Action>(
+                                        "Entity Framework SP",
+                                        RunEFSP),
+                                    new Tuple<string, Action>(
+                                        "SQLDataReader SP By Row",
+                                        () => RunSqlDataReaderByRow("exec uspGetManagerEmployees @BusinessEntityID")),
+                                    new Tuple<string, Action>(
+                                        "SQLDataReader Dynamic SQL By Row",
+                                        () => RunSqlDataReaderByRow(sql)),
+                                    new Tuple<string, Action>(
+                                        "SQLDataReader Dynamic SQL Into DataSet",
+                                        () => RunSqlDataReaderIntoDataSet(sql)),
+                                    new Tuple<string, Action>(
+                                        "SQLDataReader SP Into DataSet",
+                                        () => RunSqlDataReaderIntoDataSet("exec uspGetManagerEmployees @BusinessEntityID")),
+                                    new Tuple<string, Action>(
+                                        "Dapper Dynamic SQL",
+                                        RunDapperWithDynamicSql),
+                                    new Tuple<string, Action>(
+                                        "Dapper Dynamic SQL with POCO Mapping",
+                                        RunDapperWithDynamicSqlToPoco)
                                 };
+            var measurements = testCases.ToDictionary<Tuple<string, Action>, string, IList<double>>(testCase => testCase.Item1, testCase => new List<double>());
 
             Console.WriteLine($"Running {totalSamples} samples of {executionsPerSample} queries per framework. Could take a minute.");
             for (int i = 0; i < totalSamples; i++)
             {
-                foreach (var action in delegates)
+                foreach (var action in testCases)
                 {
-                    measurements[action.Key].Add(RunNTimes(action.Value, executionsPerSample));
+                    measurements[action.Item1].Add(RunNTimes(action.Item2, executionsPerSample));
                 }
             }
 
             Console.WriteLine($"Results of {totalSamples} samples of {executionsPerSample} executions:");
             var results = (from measurement in measurements
                             let fiveNumberSummary = measurement.Value.FiveNumberSummary()
+                            orderby fiveNumberSummary.Median()
                             select
                                 new Measurement()
                                     {
@@ -78,6 +95,20 @@ namespace ORMTester
             Console.Read();
         }
 
+        private static void clearDbCache()
+        {
+            using (var connection = new SqlConnection(ConfigurationManager.ConnectionStrings["AdventureWorks"].ConnectionString)
+    )
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand("DBCC FREEPROCCACHE;DBCC DROPCLEANBUFFERS;", connection))
+                {
+                    command.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+        }
+
         public class Measurement
         {
             public string Case { get; set; }
@@ -95,6 +126,68 @@ namespace ORMTester
             public override string ToString()
             {
                 return $"{this.Case} | {this.Minimum} | {this.LowerQuantile} | {this.Median} | {this.UpperQuantile} | {this.Maximum}";
+            }
+        }
+
+        private static void RunSqlDataReaderByRow(string sql)
+        {
+            using (var connection = new SqlConnection(ConfigurationManager.ConnectionStrings["AdventureWorks"].ConnectionString)
+    )
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand(sql, connection))
+                {
+                    command.Parameters.Add(new SqlParameter("@BusinessEntityID", 2));
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        ManagerEmployees employees = new ManagerEmployees()
+                                                         {
+                                                             BusinessEntityID = reader.GetInt32(4),
+                                                             FirstName = reader.GetString(5),
+                                                             LastName = reader.GetString(6),
+                                                             ManagerFirstName = reader.GetString(2),
+                                                             ManagerLastName = reader.GetString(3),
+                                                             OrganizationNode = reader.GetString(1),
+                                                             RecursionLevel = reader.GetInt32(0)
+                                                         };
+                    }
+                    reader.Close();
+                }
+                connection.Close();
+            }
+        }
+
+        private static void RunSqlDataReaderIntoDataSet(string sql)
+        {
+            DataTable dataTable = new DataTable();
+            using (var connection = new SqlConnection(ConfigurationManager.ConnectionStrings["AdventureWorks"].ConnectionString)
+    )
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand(sql, connection))
+                {
+                    command.Parameters.Add(new SqlParameter("@BusinessEntityID", 2));
+                    using (SqlDataAdapter da = new SqlDataAdapter(command))
+                    {
+                        da.Fill(dataTable);
+                    }
+                }
+                connection.Close();
+            }
+
+            for (int i = 0; i < dataTable.Rows.Count; i++)
+            {
+                ManagerEmployees employees = new ManagerEmployees()
+                {
+                    BusinessEntityID = (int)dataTable.Rows[i]["BusinessEntityId"],
+                    FirstName = (string)dataTable.Rows[i]["FirstName"],
+                    LastName = (string)dataTable.Rows[i]["LastName"],
+                    ManagerFirstName = (string)dataTable.Rows[i]["ManagerFirstName"],
+                    ManagerLastName = (string)dataTable.Rows[i]["ManagerLastName"],
+                    OrganizationNode = (string)dataTable.Rows[i]["OrganizationNode"],
+                    RecursionLevel = (int)dataTable.Rows[i]["RecursionLevel"]
+                };
             }
         }
 
@@ -116,6 +209,7 @@ namespace ORMTester
 
         private static long RunNTimes(Action action, int n)
         {
+            clearDbCache();
             var watch = Stopwatch.StartNew();
             for (int i = 0; i < n; i++)
             {
